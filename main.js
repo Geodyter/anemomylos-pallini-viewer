@@ -64,7 +64,7 @@ const load = (url, onProgress) => new Promise((res, rej) => loader.load(url, res
 // ---------- κατάσταση ----------
 const controls = new PointerLockControls(camera, renderer.domElement);
 const keys = {};
-let sceneRoot = null, todayRoot = null, historicNodes = [], groundMeshes = [], towerR = 3.1, mode = 'historic', models = null;
+let sceneRoot = null, todayRoot = null, historicNodes = [], groundMeshes = [], towerR = 3.1, mode = 'historic', models = null, base = '/';
 const ray = new THREE.Raycaster();
 const down = new THREE.Vector3(0, -1, 0);
 
@@ -78,8 +78,7 @@ const setMsg = (t, s = '') => { $('txt').textContent = t; $('sub').textContent =
 
 async function init() {
   // τοπικά: /api/models (serve.py)· στατικά (GitHub Pages): models.json με σχετικές διαδρομές
-  let base = '/';
-  if (!location.pathname.startsWith('/viewer/')) { base = ''; models = await (await fetch('models.json')).json(); } else try { const r = await fetch('/api/models'); if (!r.ok || !(r.headers.get('content-type') || '').includes('json')) throw 0; models = await r.json(); }
+    if (!location.pathname.startsWith('/viewer/')) { base = ''; models = await (await fetch('models.json')).json(); } else try { const r = await fetch('/api/models'); if (!r.ok || !(r.headers.get('content-type') || '').includes('json')) throw 0; models = await r.json(); }
   catch { base = ''; models = await (await fetch('models.json')).json(); }
   if (!models.scene) { setMsg('Δεν βρέθηκε output/windmill_v*_webgl.glb', 'Τρέξε πρώτα το scripts/export_variants.py -- webgl'); return; }
   const gltf = await load(base + models.scene, (e) => {
@@ -142,7 +141,7 @@ async function toggleMode() {
       scene.add(todayRoot);
     }
     historicNodes.forEach((n) => (n.visible = false));
-    todayRoot.visible = true; mode = 'today'; b.textContent = 'Ιστορική';
+    todayRoot.visible = true; mode = 'today'; b.textContent = 'Τότε';
   } else {
     historicNodes.forEach((n) => (n.visible = true));
     if (todayRoot) todayRoot.visible = false;
