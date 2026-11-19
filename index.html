@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="el">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%276%27 fill=%27%23b8864f%27/%3E%3Cpath d=%27M11 28V12h10v16zM16 4l9 8H7z%27 fill=%27%23fff%27/%3E%3C/svg%3E">
+<title>Ανεμόμυλος Παλλήνης — viewer</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #8aa0b8; font-family: system-ui, sans-serif; }
+  canvas { display: block; }
+  #ui { position: fixed; inset: 0; pointer-events: none; color: #fff; text-shadow: 0 1px 3px #000a; }
+  #msg { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 10px;
+         background: #0006; font-size: 18px; text-align: center; pointer-events: auto; cursor: pointer; }
+  #msg small { font-size: 13px; opacity: .85; }
+  #bar { width: 260px; height: 6px; background: #fff3; border-radius: 3px; overflow: hidden; }
+  #bar i { display: block; height: 100%; width: 0; background: #fff; }
+  #mode { position: absolute; top: 12px; right: 12px; pointer-events: auto; padding: 8px 14px; font-size: 14px; border: 0; border-radius: 6px;
+          background: #000a; color: #fff; cursor: pointer; display: none; }
+  #mode:hover { background: #000d; }
+  #credits-btn { position: absolute; top: 12px; right: 100px; pointer-events: auto; padding: 8px 14px; font-size: 14px; border: 0; border-radius: 6px; background: #000a; color: #fff; cursor: pointer; }
+  #credits { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; background: #000b; pointer-events: auto; z-index: 5; }
+  #credits .box { max-width: 720px; max-height: 80vh; overflow: auto; background: #fff; color: #222; text-shadow: none; padding: 20px 26px; border-radius: 8px; font-size: 13px; line-height: 1.5; }
+  #credits h2 { margin: 0 0 8px; font-size: 18px; } #credits h3 { margin: 14px 0 4px; font-size: 14px; } #credits a { color: #14598f; }
+  #credits button { margin-top: 12px; padding: 6px 14px; }
+  #hud { position: absolute; left: 12px; bottom: 10px; font-size: 12px; opacity: .8; }
+  #dot { position: absolute; left: 50%; top: 50%; width: 4px; height: 4px; margin: -2px; border-radius: 50%; background: #fff9; display: none; }
+</style>
+</head>
+<body>
+<div id="ui">
+  <div id="dot"></div>
+  <button id="mode"></button>
+  <button id="credits-btn">Credits</button>
+  <div id="credits"><div class="box">
+    <h2>Credits</h2>
+    <p><b>Το τοπίο είναι ερμηνευτική αναπαράσταση</b> της εποχής, όχι ακριβής αποτύπωση. Ο ανεμόμυλος της Παλλήνης έχει ανακατασκευαστεί από ιστορική φωτογραφία· διαστάσεις και λεπτομέρειες είναι εν μέρει υποθέσεις.</p>
+    <h3>Μοντέλα Sketchfab (CC Attribution 4.0)</h3>
+    <ul>
+      <li>Cypress tree — ElectroNick — <a href="https://sketchfab.com/3d-models/249d8cb553a8469e9d645713f8e96ed1" target="_blank" rel="noopener">Sketchfab</a></li>
+      <li>Cypress — scadl — <a href="https://sketchfab.com/3d-models/877cf2f6e001422c8233edb9c45162dc" target="_blank" rel="noopener">Sketchfab</a></li>
+      <li>Old olive tree — greg-l — <a href="https://sketchfab.com/3d-models/6328df8a0f214143a880a72b86db2ab4" target="_blank" rel="noopener">Sketchfab</a></li>
+      <li>Pine Tree — evolveduk — <a href="https://sketchfab.com/3d-models/d45218a3fab349e5b1de040f29e7b6f9" target="_blank" rel="noopener">Sketchfab</a></li>
+      <li>Umbrella Pine — rhcreations — <a href="https://sketchfab.com/3d-models/0de584cdb07a408c8e411d892cb2c9a7" target="_blank" rel="noopener">Sketchfab</a></li>
+      <li>Umbrella pine — alwoke78 — <a href="https://sketchfab.com/3d-models/b263487bab864018a92b609882ce7989" target="_blank" rel="noopener">Sketchfab</a></li>
+    </ul>
+    <p>Άδεια: <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>. Τα μοντέλα έχουν αποκοπεί, απλοποιηθεί και αλλάξει χρώμα/υφές.</p>
+    <h3>Poly Haven (CC0)</h3>
+    <p>HDRI Syferfontein 1d Clear (Pure Sky) — Greg Zaal, Jarod Guest · υφές Rock Wall 04 (Charlotte Baglioni, Dario Barresi), Dry Ground Rocks (Rob Tuytel), Grass Ground (Charlotte Baglioni) · μοντέλα Shrub 02 (Rico Cilliers), Rock Moss Set 01 (Kless Gyzen), Namaqualand Boulder 03 (Dario Barresi, Jenelle van Heerden), Boulder 01 (Rico Cilliers), Rock 07 (Jenelle van Heerden). <a href="https://polyhaven.com" target="_blank" rel="noopener">polyhaven.com</a></p>
+    <h3>Λογισμικό</h3>
+    <p>three.js (MIT), Blender, MoGe-2 (εκτίμηση βάθους από τη φωτογραφία).</p>
+    <button id="credits-close">Κλείσιμο</button>
+  </div></div>
+  <div id="hud">WASD κίνηση · Shift τρέξιμο · ποντίκι κοίταγμα · Esc απελευθέρωση</div>
+  <div id="msg"><div id="txt">Φόρτωση…</div><div id="bar"><i></i></div><small id="sub"></small></div>
+</div>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/" } }
+</script>
+<script type="module" src="main.js"></script>
+<script>
+  const cr = document.getElementById('credits');
+  document.getElementById('credits-btn').onclick = () => { cr.style.display = 'flex'; };
+  document.getElementById('credits-close').onclick = () => { cr.style.display = 'none'; };
+  cr.onclick = (e) => { if (e.target === cr) cr.style.display = 'none'; };
+</script>
+</body>
+</html>
