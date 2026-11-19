@@ -10,7 +10,7 @@
   canvas { display: block; }
   #ui { position: fixed; inset: 0; pointer-events: none; color: #fff; text-shadow: 0 1px 3px #000a; }
   #msg { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 10px;
-         background: #0006; font-size: 18px; text-align: center; pointer-events: auto; cursor: pointer; }
+         background: #0006; font-size: 18px; text-align: center; pointer-events: none; }
   #msg small { font-size: 13px; opacity: .85; }
   #bar { width: 260px; height: 6px; background: #fff3; border-radius: 3px; overflow: hidden; }
   #bar i { display: block; height: 100%; width: 0; background: #fff; }
@@ -22,6 +22,9 @@
   #credits .box { max-width: 720px; max-height: 80vh; overflow: auto; background: #fff; color: #222; text-shadow: none; padding: 20px 26px; border-radius: 8px; font-size: 13px; line-height: 1.5; }
   #credits h2 { margin: 0 0 8px; font-size: 18px; } #credits h3 { margin: 14px 0 4px; font-size: 14px; } #credits a { color: #14598f; }
   #credits button { margin-top: 12px; padding: 6px 14px; }
+  #keys, .keys { font-size: 14px; line-height: 1.7; background: #0007; border-radius: 8px; padding: 10px 16px; text-align: left; }
+  #keys b, .keys b { display: inline-block; min-width: 64px; }
+  #helpbox { position: absolute; left: 12px; top: 12px; display: none; }
   #hud { position: absolute; left: 12px; bottom: 10px; font-size: 12px; opacity: .8; }
   #dot { position: absolute; left: 50%; top: 50%; width: 4px; height: 4px; margin: -2px; border-radius: 50%; background: #fff9; display: none; }
 </style>
@@ -50,8 +53,9 @@
     <p>three.js (MIT), Blender, MoGe-2 (εκτίμηση βάθους από τη φωτογραφία).</p>
     <button id="credits-close">Κλείσιμο</button>
   </div></div>
-  <div id="hud">WASD κίνηση · Shift τρέξιμο · ποντίκι κοίταγμα · Esc απελευθέρωση</div>
-  <div id="msg"><div id="txt">Φόρτωση…</div><div id="bar"><i></i></div><small id="sub"></small></div>
+  <div id="helpbox"><div class="keys"><b>WASD</b> κίνηση<br><b>Ποντίκι</b> κοιτάς γύρω<br><b>Shift</b> τρέξιμο<br><b>T</b> Τότε / Σήμερα<br><b>C</b> Credits<br><b>H</b> βοήθεια<br><b>Esc</b> παύση (τα κουμπιά πατιούνται)</div></div>
+  <div id="hud">T Τότε/Σήμερα · C Credits · H βοήθεια · Esc παύση</div>
+  <div id="msg"><div id="txt">Φόρτωση…</div><div id="bar"><i></i></div><small id="sub"></small><div id="keys"><b>WASD</b> κίνηση<br><b>Ποντίκι</b> κοιτάς γύρω<br><b>Shift</b> τρέξιμο<br><b>T</b> Τότε / Σήμερα<br><b>C</b> Credits<br><b>H</b> βοήθεια<br><b>Esc</b> παύση (τα κουμπιά πατιούνται)</div></div>
 </div>
 <script type="importmap">
 { "imports": {
@@ -61,8 +65,9 @@
 <script type="module" src="main.js"></script>
 <script>
   const cr = document.getElementById('credits');
-  document.getElementById('credits-btn').onclick = () => { cr.style.display = 'flex'; };
-  document.getElementById('credits-close').onclick = () => { cr.style.display = 'none'; };
+  window.__toggleCredits = (on) => { cr.style.display = (on === undefined ? cr.style.display !== 'flex' : on) ? 'flex' : 'none'; if (cr.style.display === 'flex' && document.pointerLockElement) document.exitPointerLock(); };
+  document.getElementById('credits-btn').onclick = () => window.__toggleCredits(true);
+  document.getElementById('credits-close').onclick = () => window.__toggleCredits(false);
   cr.onclick = (e) => { if (e.target === cr) cr.style.display = 'none'; };
 </script>
 </body>

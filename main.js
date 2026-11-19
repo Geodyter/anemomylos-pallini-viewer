@@ -124,14 +124,20 @@ async function init() {
     const b = $('mode'); b.style.display = 'block'; b.textContent = 'Σήμερα'; b.onclick = toggleMode;
   }
   $('bar').style.display = 'none';
-  setMsg('Κλικ για να περπατήσεις', 'WASD · Shift τρέξιμο · Esc απελευθέρωση');
-  $('msg').onclick = () => controls.lock();
+  setMsg('Κλικ στη σκηνή για να περπατήσεις', '');
+  // κλικ στον κενό χώρο της σκηνής (καμβάς) ξανακλειδώνει το ποντίκι· τα κουμπιά/Credits δεν περνούν κλικ στον καμβά
+  renderer.domElement.addEventListener('click', () => { if (!controls.isLocked && $('credits').style.display !== 'flex') controls.lock(); });
   renderer.setAnimationLoop(tick);
   window.__ready = true; window.__cam = camera;
   window.__place = ([x, z], [lx, ly, lz]) => { eyeY = groundY(x, z, 0) + EYE; camera.position.set(x, eyeY, z); camera.lookAt(lx, eyeY + ly, lz); };
 }
 
+let busy = false;
 async function toggleMode() {
+  if (busy) return; busy = true;
+  try { await toggleModeInner(); } finally { busy = false; }
+}
+async function toggleModeInner() {
   const b = $('mode');
   if (mode === 'historic') {
     if (!todayRoot) {
@@ -150,10 +156,17 @@ async function toggleMode() {
 }
 
 // ---------- είσοδος ----------
-addEventListener('keydown', (e) => (keys[e.code] = true));
+addEventListener('keydown', (e) => {
+  keys[e.code] = true;
+  if (e.repeat || e.ctrlKey || e.altKey || e.metaKey) return;
+  if (e.code === 'KeyT' && models && models.today && $('mode').style.display === 'block') toggleMode();
+  else if (e.code === 'KeyC') window.__toggleCredits();
+  else if (e.code === 'KeyH') { const h = $('helpbox'); h.style.display = h.style.display === 'block' ? 'none' : 'block'; }
+  else if (e.code === 'Escape' && $('credits').style.display === 'flex') window.__toggleCredits(false);
+});
 addEventListener('keyup', (e) => (keys[e.code] = false));
 controls.addEventListener('lock', () => { $('msg').style.display = 'none'; $('dot').style.display = 'block'; });
-controls.addEventListener('unlock', () => { $('msg').style.display = 'flex'; $('dot').style.display = 'none'; setMsg('Σε παύση', 'Κλικ για συνέχεια'); });
+controls.addEventListener('unlock', () => { $('msg').style.display = 'flex'; $('dot').style.display = 'none'; setMsg('Σε παύση', 'Κλικ στον κενό χώρο της σκηνής για συνέχεια'); });
 addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); });
 
 // ---------- κίνηση ----------
