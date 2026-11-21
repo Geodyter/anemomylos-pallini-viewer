@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ανεμόμυλος Παλλήνης</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Literata:opsz,wght@7..72,400;7..72,600&display=swap" rel="stylesheet">
+<style>
+/* VOICE: quiet, archival, a walk into an old photograph
+   IDEA: a mounted print with a handwritten caption card
+   PICTURE: the splat itself, full screen; the card floats over it
+   COLOUR and TYPE: silver-gelatin greys, paper white, one ink accent; Literata
+   LAYOUT: full-bleed canvas, centred card, small help strip bottom-left */
+:root{color-scheme:light dark;--paper:#f3f1ec;--ink:#1d1c1a;--mute:#6b6862;--accent:#7a2e1f;--sky:#dcdcd7}
+*{box-sizing:border-box;min-width:0}
+html,body{margin:0;height:100%;overflow:hidden;background:var(--sky);color:var(--ink);font:16px/1.5 Literata,Georgia,serif}
+canvas{display:block;width:100vw;height:100vh;touch-action:none}
+#card{position:fixed;inset:0;display:grid;place-items:center;background:rgba(30,29,27,.35);z-index:5;padding:16px}
+#card .in{background:var(--paper);max-width:440px;width:100%;padding:28px 28px 22px;box-shadow:0 18px 50px rgba(0,0,0,.35);border:1px solid #d8d4cb}
+h1{font-size:30px;line-height:1.08;margin:0 0 6px;font-weight:600;text-wrap:balance}
+.sub{color:var(--mute);margin:0 0 18px;font-size:15px}
+.bar{height:6px;background:#e1ddd4;overflow:hidden;margin:6px 0 4px}
+.bar i{display:block;height:100%;width:0;background:var(--accent);transition:width .2s}
+#status{font-size:14px;color:var(--mute);min-height:21px}
+button{font:inherit;font-size:16px;min-height:44px;padding:0 22px;border:0;background:var(--ink);color:var(--paper);cursor:pointer;margin-top:14px}
+button:disabled{opacity:.35;cursor:default}
+button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.keys{margin:16px 0 0;font-size:14px;color:var(--mute);display:grid;grid-template-columns:auto 1fr;gap:3px 12px}
+kbd{font:600 13px/1 Literata,serif;color:var(--ink);background:#e7e3da;padding:3px 6px;border-radius:3px;white-space:nowrap}
+#hud{position:fixed;left:12px;bottom:12px;z-index:3;font-size:13px;color:#2a2926;background:rgba(243,241,236,.82);padding:6px 10px;pointer-events:none}
+#credit{position:fixed;right:12px;bottom:12px;z-index:3;font-size:12px;color:#3a3935;background:rgba(243,241,236,.7);padding:4px 8px;max-width:60vw}
+#credit a{color:inherit}
+#cross{position:fixed;left:50%;top:50%;width:6px;height:6px;margin:-3px;border-radius:50%;background:rgba(255,255,255,.8);box-shadow:0 0 0 1px rgba(0,0,0,.35);z-index:2;display:none}
+.touch .keys{display:none}
+@media(max-width:600px){h1{font-size:25px}#credit{display:none}}
+</style>
+<script type="importmap">
+{"imports":{
+ "three":"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
+ "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/",
+ "@sparkjsdev/spark":"https://cdn.jsdelivr.net/npm/@sparkjsdev/spark@2.3.1/dist/spark.module.js"}}
+</script>
+</head>
+<body>
+<div id="card"><div class="in">
+  <h1>Ο πέτρινος ανεμόμυλος της Παλλήνης</h1>
+  <p class="sub">Τρισδιάστατη αναπαράσταση από την ιστορική φωτογραφία, πίσω από τον Άγιο Τρύφωνα.</p>
+  <div class="bar"><i id="prog"></i></div>
+  <div id="status">Φόρτωση σκηνής…</div>
+  <button id="go" disabled>Μπες στη σκηνή</button>
+  <div class="keys">
+    <kbd>W A S D</kbd><span>περπάτημα (και τα βελάκια)</span>
+    <kbd>Ποντίκι</kbd><span>κοιτάζεις γύρω</span>
+    <kbd>Shift</kbd><span>τρέξιμο</span>
+    <kbd>F</kbd><span>πτήση ή περπάτημα· στην πτήση Space πάνω, C κάτω</span>
+    <kbd>R</kbd><span>επιστροφή στην αρχή</span>
+    <kbd>Esc</kbd><span>παύση</span>
+  </div>
+</div></div>
+<div id="cross"></div>
+<div id="hud">Περπάτημα</div>
+<div id="credit">Splat: World Labs Atlas · Renderer: <a href="https://sparkjs.dev">Spark</a> (MIT)</div>
+
+<script>
+window.__report = m => { const el = document.getElementById("status"); if (el) el.textContent = "Σφάλμα: " + m; };
+addEventListener("error", e => __report((e.message || e.type) + (e.filename ? " @ " + e.filename.split("/").pop() : "")), true);
+addEventListener("unhandledrejection", e => __report(String(e.reason && (e.reason.message || e.reason))));
+setTimeout(() => { if (!window.__started) __report("τα scripts δεν ξεκίνησαν (μπλοκαρίστηκε η βιβλιοθήκη;)"); }, 20000);
+</script>
+<script type="module">
+window.__started = true;
+let THREE, SparkRenderer, SplatMesh;
+try {
+  document.getElementById("status").textContent = "Φόρτωση βιβλιοθηκών…";
+  THREE = await import("three");
+  ({ SparkRenderer, SplatMesh } = await import("@sparkjsdev/spark"));
+} catch (e) { __report("βιβλιοθήκη: " + (e.message || e)); throw e; }
+{
+const $ = id => document.getElementById(id);
+const statusEl = $("status"), prog = $("prog"), go = $("go"), card = $("card"), hud = $("hud"), cross = $("cross");
+const isTouch = matchMedia("(pointer:coarse)").matches;
+if (isTouch) { document.body.classList.add("touch"); hud.textContent = "Αριστερό μισό: κίνηση · δεξί: βλέμμα"; }
+
+const renderer = new THREE.WebGLRenderer({ antialias: false });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
+renderer.setSize(innerWidth, innerHeight);
+document.body.prepend(renderer.domElement);
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0xdcdcd7);
+const camera = new THREE.PerspectiveCamera(65, innerWidth / innerHeight, 0.05, 600);
+camera.rotation.order = "YXZ";
+scene.add(new SparkRenderer({ renderer }));
+addEventListener("resize", () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); });
+
+/* terrain heightmap built from the splat (1 m cells, y up, centimetres) */
+let HM = null;
+function ground(x, z) {
+  if (!HM) return 1.5;
+  const fx = Math.min(Math.max((x - HM.x0) / HM.s, 0), HM.n - 1.001), fz = Math.min(Math.max((z - HM.z0) / HM.s, 0), HM.n - 1.001);
+  const i = fx | 0, j = fz | 0, u = fx - i, v = fz - j, n = HM.n, h = HM.h;
+  const a = h[j * n + i], b = h[j * n + i + 1], c = h[(j + 1) * n + i], d = h[(j + 1) * n + i + 1];
+  return ((a * (1 - u) + b * u) * (1 - v) + (c * (1 - u) + d * u) * v) / 100;
+}
+const TOWER = { x: -3.9, z: -10.9, r: 1.7 };
+const EYE = 1.65, LIMIT = 60;
+const START = { x: 1.2, z: 3.4 };
+function reset() {
+  camera.position.set(START.x, ground(START.x, START.z) + EYE, START.z);
+  camera.lookAt(TOWER.x, 5.5, TOWER.z);
+  yaw = camera.rotation.y; pitch = camera.rotation.x; vy = camera.position.y;
+}
+
+/* the scene ships as ten binary chunks (each under the upload limit) */
+const PARTS = Array.from({ length: 10 }, (_, i) => `scene.${String(i + 1).padStart(2, "0")}.bin`), TOTAL = 32738732;
+async function fetchParts(urls) {
+  let got = 0;
+  const parts = await Promise.all(urls.map(async u => {
+    const r = await fetch(u); if (!r.ok) throw new Error(u + " " + r.status);
+    const rd = r.body.getReader(), chunks = []; let len = 0;
+    for (;;) { const { done, value } = await rd.read(); if (done) break; chunks.push(value); len += value.length; got += value.length;
+      prog.style.width = Math.min(95, got / TOTAL * 95) + "%"; statusEl.textContent = `Φόρτωση σκηνής… ${(got / 1e6).toFixed(0)} από ${(TOTAL / 1e6).toFixed(0)} MB`; }
+    const out = new Uint8Array(len); let o = 0; for (const c of chunks) { out.set(c, o); o += c.length; }
+    return out;
+  }));
+  const all = new Uint8Array(parts.reduce((a, p) => a + p.length, 0)); let o = 0;
+  for (const p of parts) { all.set(p, o); o += p.length; }
+  return all;
+}
+
+let yaw = 0, pitch = 0, vy = 0, fly = false, running = false;
+(async () => {
+  try {
+    const hj = await (await fetch("height.json")).json();
+    const raw = Uint8Array.from(atob(hj.h), c => c.charCodeAt(0));
+    HM = { x0: hj.x0, z0: hj.z0, s: hj.s, n: hj.n, h: new Int16Array(raw.buffer) };
+  } catch (e) { console.warn("heightmap", e); }
+  reset();
+  statusEl.textContent = "Φόρτωση σκηνής… 0 MB";
+  try {
+    const bytes = await fetchParts(PARTS);
+    statusEl.textContent = "Αποσυμπίεση 2 εκατομμυρίων σημείων…";
+    const mesh = new SplatMesh({ fileBytes: bytes, fileType: "spz", fileName: "scene.spz" });
+    scene.add(mesh);
+    await mesh.initialized;
+    prog.style.width = "100%";
+    statusEl.textContent = "Έτοιμο.";
+    go.disabled = false; go.focus();
+  } catch (e) {
+    statusEl.textContent = "Η σκηνή δεν φόρτωσε: " + (e.message || e);
+  }
+})();
+
+/* input */
+const keys = new Set();
+addEventListener("keydown", e => {
+  if (e.target.tagName === "BUTTON" && (e.code === "Space" || e.code === "Enter")) return;
+  keys.add(e.code);
+  if (e.code === "KeyF") { fly = !fly; hud.textContent = fly ? "Πτήση · Space πάνω, C κάτω" : "Περπάτημα"; }
+  if (e.code === "KeyR") reset();
+  if (e.code === "Space") e.preventDefault();
+});
+addEventListener("keyup", e => keys.delete(e.code));
+addEventListener("blur", () => keys.clear());
+
+const canvas = renderer.domElement;
+let locked = false, dragging = false, lastX = 0, lastY = 0;
+function look(dx, dy, k) { yaw -= dx * k; pitch = Math.max(-1.45, Math.min(1.45, pitch - dy * k)); }
+function enter() {
+  card.style.display = "none"; running = true; cross.style.display = isTouch ? "none" : "block";
+  if (!isTouch && canvas.requestPointerLock) { try { const p = canvas.requestPointerLock(); if (p && p.catch) p.catch(() => {}); } catch (e) {} }
+}
+go.addEventListener("click", enter);
+canvas.addEventListener("click", () => { if (running && !locked && !isTouch && canvas.requestPointerLock) { try { const p = canvas.requestPointerLock(); if (p && p.catch) p.catch(() => {}); } catch (e) {} } });
+document.addEventListener("pointerlockchange", () => {
+  const was = locked; locked = document.pointerLockElement === canvas;
+  if (was && !locked) { running = false; go.textContent = "Συνέχεια"; card.style.display = "grid"; cross.style.display = "none"; keys.clear(); }
+});
+addEventListener("mousemove", e => { if (locked) look(e.movementX, e.movementY, 0.0022); });
+/* drag-to-look when pointer lock is refused; touch: left half moves, right half looks */
+const touchMove = { id: null, x: 0, y: 0, dx: 0, dy: 0 };
+canvas.addEventListener("pointerdown", e => {
+  if (!running) return;
+  if (e.pointerType === "touch" && e.clientX < innerWidth / 2 && touchMove.id === null) { Object.assign(touchMove, { id: e.pointerId, x: e.clientX, y: e.clientY, dx: 0, dy: 0 }); return; }
+  if (!locked) { dragging = e.pointerId; lastX = e.clientX; lastY = e.clientY; }
+});
+canvas.addEventListener("pointermove", e => {
+  if (e.pointerId === touchMove.id) { touchMove.dx = (e.clientX - touchMove.x) / 60; touchMove.dy = (e.clientY - touchMove.y) / 60; return; }
+  if (dragging === e.pointerId) { look(e.clientX - lastX, e.clientY - lastY, 0.004); lastX = e.clientX; lastY = e.clientY; }
+});
+const endPtr = e => { if (e.pointerId === touchMove.id) { touchMove.id = null; touchMove.dx = touchMove.dy = 0; } if (dragging === e.pointerId) dragging = false; };
+canvas.addEventListener("pointerup", endPtr); canvas.addEventListener("pointercancel", endPtr);
+
+/* loop */
+const clock = new THREE.Clock(), fwd = new THREE.Vector3(), right = new THREE.Vector3();
+renderer.setAnimationLoop(() => {
+  const dt = Math.min(clock.getDelta(), 0.05);
+  if (running) {
+    let mx = 0, mz = 0, my = 0;
+    if (keys.has("KeyW") || keys.has("ArrowUp")) mz += 1;
+    if (keys.has("KeyS") || keys.has("ArrowDown")) mz -= 1;
+    if (keys.has("KeyA") || keys.has("ArrowLeft")) mx -= 1;
+    if (keys.has("KeyD") || keys.has("ArrowRight")) mx += 1;
+    if (touchMove.id !== null) { mx += Math.max(-1, Math.min(1, touchMove.dx)); mz -= Math.max(-1, Math.min(1, touchMove.dy)); }
+    if (fly) { if (keys.has("Space")) my += 1; if (keys.has("KeyC")) my -= 1; }
+    const speed = (keys.has("ShiftLeft") || keys.has("ShiftRight") ? 6 : 2.2) * (fly ? 2 : 1);
+    fwd.set(-Math.sin(yaw), 0, -Math.cos(yaw)); right.set(Math.cos(yaw), 0, -Math.sin(yaw));
+    const p = camera.position;
+    p.addScaledVector(fwd, mz * speed * dt).addScaledVector(right, mx * speed * dt);
+    p.x = Math.max(-LIMIT, Math.min(LIMIT, p.x)); p.z = Math.max(-LIMIT - 20, Math.min(LIMIT - 20, p.z));
+    const tx = p.x - TOWER.x, tz = p.z - TOWER.z, td = Math.hypot(tx, tz);
+    if (!fly && td < TOWER.r) { p.x = TOWER.x + tx / (td || 1) * TOWER.r; p.z = TOWER.z + tz / (td || 1) * TOWER.r; }
+    const floor = ground(p.x, p.z) + EYE;
+    if (fly) { p.y = Math.max(floor - 1, p.y + my * speed * dt); vy = p.y; }
+    else { vy += (floor - vy) * Math.min(1, dt * 8); p.y = vy; }
+    camera.rotation.set(pitch, yaw, 0);
+  }
+  renderer.render(scene, camera);
+});
+}
+</script>
+</body>
+</html>
